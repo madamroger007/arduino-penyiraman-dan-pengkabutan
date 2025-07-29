@@ -31,6 +31,9 @@ const char* topic_ketinggian_air = "sensor/ketinggian_air";
 const int DRY_VALUE = 4000;
 const int WET_VALUE = 1200;
 
+unsigned long lastPublish = 0;
+const long interval = 1000; // 1 detik
+
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
@@ -113,22 +116,22 @@ void loop() {
   }
   client.loop();
 
-  // Baca sensor
-  float suhu = dht.readTemperature();
-  float kelembapan = dht.readHumidity();
-  int nilaiSensorTanah = analogRead(SOIL_MOISTURE_PIN);
+  unsigned long now = millis();
+  if (now - lastPublish >= interval) {
+    lastPublish = now;
 
+    // Baca sensor
+    float suhu = dht.readTemperature();
+    float kelembapan = dht.readHumidity();
+    int nilaiSensorTanah = analogRead(SOIL_MOISTURE_PIN);
 
-  // Konversi nilai kelembapan tanah ke persentase
-  int kelembapanTanah = map(nilaiSensorTanah, DRY_VALUE, WET_VALUE, 0, 100);
-  kelembapanTanah = constrain(kelembapanTanah, 0, 100);
+    // Konversi nilai kelembapan tanah ke persentase
+    int kelembapanTanah = map(nilaiSensorTanah, DRY_VALUE, WET_VALUE, 0, 100);
+    kelembapanTanah = constrain(kelembapanTanah, 0, 100);
 
-
-
-  // Kirim data ke MQTT
-  client.publish(topic_suhu_udara, String(suhu).c_str(), true);
-  client.publish(topic_kelembapan_udara, String(kelembapan).c_str(), true);
-  client.publish(topic_kelembapan_tanah, String(kelembapanTanah).c_str(), true);
-
-  delay(3000); // Kirim data setiap 3 detik
+    // Kirim data ke MQTT
+    client.publish(topic_suhu_udara, String(suhu).c_str(), true);
+    client.publish(topic_kelembapan_udara, String(kelembapan).c_str(), true);
+    client.publish(topic_kelembapan_tanah, String(kelembapanTanah).c_str(), true);
+  }
 }
